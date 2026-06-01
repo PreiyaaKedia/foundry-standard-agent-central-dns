@@ -7,32 +7,35 @@
       "value": "project"
     },
     "projectResourceId": {
-      "_comment": "Required when connectionScope = 'project'. Leave default/empty when connectionScope = 'account'.",
-      "value": "/subscriptions/86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5/resourceGroups/rg-foundry-byovnet-pk-v1/providers/Microsoft.CognitiveServices/accounts/foundrysasiv2sapk/projects/project"
+       "_comment": "Required when connectionScope = 'project'. Leave default/empty when connectionScope = 'account'.",
+      "value": "/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.CognitiveServices/accounts/YOUR-AI-FOUNDRY-ACCOUNT/projects/YOUR-PROJECT"
     },
     "accountResourceId": {
       "_comment": "Required when connectionScope = 'account'. Leave empty when connectionScope = 'project'.",
       "value": ""
     },
     "apimResourceId": {
-      "value": "/subscriptions/86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5/resourceGroups/rg-foundry-byovnet-demo/providers/Microsoft.ApiManagement/service/apim-vnet-stdv1-tier"
+      "value": "/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-APIM-RG/providers/Microsoft.ApiManagement/service/YOUR-APIM-SERVICE"
     },
     "apiName": {
-      "value": "foundrysasiv2sapk"
+      "value": "YOUR-API-NAME"
     },
     "connectionName": {
-      "value": "apim-foundry-openai-v5"
+      "value": "YOUR-CONNECTION-NAME"
     },
     "authType": {
-      "value": "ProjectManagedIdentity"
+      "_comment": "Set to ApiKey or ProjectManagedIdentity",
+      "value": "ApiKey"
     },
     "isSharedToAll": {
       "value": false
     },
     "deploymentInPath": {
+      "_comment": "true or false - Set based on setup guide to avoid 404 errors in agents",
       "value": "false"
     },
     "inferenceAPIVersion": {
+      "_comment": "Set a proper value or leave empty if your APIM backend does not need it. Set based on setup guide to avoid 404 errors in agents",
       "value": ""
     },
     "deploymentAPIVersion": {
@@ -41,11 +44,21 @@
     "staticModels": {
       "value": [
         {
-          "name": "gpt-4o",
+          "name": "YOUR-MODEL-DEPLOYMENT-NAME-1",
           "properties": {
             "model": {
-              "name": "gpt-4o",
-              "version": "2024-11-20",
+              "name": "YOUR-MODEL-NAME-1",
+              "version": "YOUR-MODEL-VERSION-1",
+              "format": "OpenAI"
+            }
+          }
+        },
+        {
+          "name": "YOUR-MODEL-DEPLOYMENT-NAME-2",
+          "properties": {
+            "model": {
+              "name": "YOUR-MODEL-NAME-2",
+              "version": "YOUR-MODEL-VERSION-2",
               "format": "OpenAI"
             }
           }
