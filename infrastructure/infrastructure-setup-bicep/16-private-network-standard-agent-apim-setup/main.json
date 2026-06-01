@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.28.1.47646",
-      "templateHash": "12740014391434331118"
+      "templateHash": "17191766672782587409"
     }
   },
   "parameters": {
@@ -188,16 +188,37 @@
     "existingDnsZones": {
       "type": "object",
       "defaultValue": {
-        "privatelink.services.ai.azure.com": "",
-        "privatelink.openai.azure.com": "",
-        "privatelink.cognitiveservices.azure.com": "",
-        "privatelink.search.windows.net": "",
-        "privatelink.blob.core.windows.net": "",
-        "privatelink.documents.azure.com": "",
-        "privatelink.azure-api.net": ""
+        "privatelink.services.ai.azure.com": {
+          "subscriptionId": "",
+          "resourceGroupName": ""
+        },
+        "privatelink.openai.azure.com": {
+          "subscriptionId": "",
+          "resourceGroupName": ""
+        },
+        "privatelink.cognitiveservices.azure.com": {
+          "subscriptionId": "",
+          "resourceGroupName": ""
+        },
+        "privatelink.search.windows.net": {
+          "subscriptionId": "",
+          "resourceGroupName": ""
+        },
+        "privatelink.blob.core.windows.net": {
+          "subscriptionId": "",
+          "resourceGroupName": ""
+        },
+        "privatelink.documents.azure.com": {
+          "subscriptionId": "",
+          "resourceGroupName": ""
+        },
+        "privatelink.azure-api.net": {
+          "subscriptionId": "",
+          "resourceGroupName": ""
+        }
       },
       "metadata": {
-        "description": "Object mapping DNS zone names to their resource group, or empty string to indicate creation"
+        "description": "Object mapping DNS zone FQDN to its location. Each value is an object { subscriptionId: string, resourceGroupName: string }.\r\n- Empty resourceGroupName  -> a new private DNS zone is created in this deployment and linked to the VNet.\r\n- Non-empty resourceGroupName -> the existing zone is referenced. subscriptionId may be empty to default to the deployment subscription, or set to a different subscription (e.g. a central/hub DNS subscription). When referencing an existing zone, the VNet link and A-record creation must be handled out-of-band (typically by the central networking team) since this deployment will skip the VNet link."
       }
     },
     "dnsZoneNames": {
@@ -1070,7 +1091,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.28.1.47646",
-              "templateHash": "3684308685796294327"
+              "templateHash": "3312402598112169398"
             }
           },
           "parameters": {
@@ -1193,7 +1214,7 @@
                 "count": "[length(parameters('dnsZoneNames'))]",
                 "input": {
                   "name": "[parameters('dnsZoneNames')[copyIndex()]]",
-                  "exists": "[not(empty(parameters('existingDnsZones')[parameters('dnsZoneNames')[copyIndex()]]))]"
+                  "exists": "[not(empty(parameters('existingDnsZones')[parameters('dnsZoneNames')[copyIndex()]].resourceGroupName))]"
                 }
               }
             }
@@ -1538,7 +1559,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.28.1.47646",
-              "templateHash": "15183396764866968355"
+              "templateHash": "2434952903479960470"
             }
           },
           "parameters": {
@@ -1664,16 +1685,37 @@
             "existingDnsZones": {
               "type": "object",
               "defaultValue": {
-                "privatelink.services.ai.azure.com": "",
-                "privatelink.openai.azure.com": "",
-                "privatelink.cognitiveservices.azure.com": "",
-                "privatelink.search.windows.net": "",
-                "[format('privatelink.blob.{0}', environment().suffixes.storage)]": "",
-                "privatelink.documents.azure.com": "",
-                "privatelink.azure-api.net": ""
+                "privatelink.services.ai.azure.com": {
+                  "subscriptionId": "",
+                  "resourceGroupName": ""
+                },
+                "privatelink.openai.azure.com": {
+                  "subscriptionId": "",
+                  "resourceGroupName": ""
+                },
+                "privatelink.cognitiveservices.azure.com": {
+                  "subscriptionId": "",
+                  "resourceGroupName": ""
+                },
+                "privatelink.search.windows.net": {
+                  "subscriptionId": "",
+                  "resourceGroupName": ""
+                },
+                "[format('privatelink.blob.{0}', environment().suffixes.storage)]": {
+                  "subscriptionId": "",
+                  "resourceGroupName": ""
+                },
+                "privatelink.documents.azure.com": {
+                  "subscriptionId": "",
+                  "resourceGroupName": ""
+                },
+                "privatelink.azure-api.net": {
+                  "subscriptionId": "",
+                  "resourceGroupName": ""
+                }
               },
               "metadata": {
-                "description": "Map of DNS zone FQDNs to resource group names. If provided, reference existing DNS zones in this resource group instead of creating them."
+                "description": "Map of DNS zone FQDNs to their location.\r\nEach value is an object { subscriptionId: string, resourceGroupName: string }.\r\n- If resourceGroupName is empty, a new private DNS zone is created in the current resource group and linked to the VNet.\r\n- If resourceGroupName is set, the existing zone is referenced. subscriptionId may be empty to default to the deployment subscription, or set to a different subscription (e.g. a central/hub DNS subscription)."
               }
             }
           },
@@ -1685,20 +1727,27 @@
             "storageDnsZoneName": "[format('privatelink.blob.{0}', environment().suffixes.storage)]",
             "cosmosDBDnsZoneName": "privatelink.documents.azure.com",
             "apiManagementDnsZoneName": "privatelink.azure-api.net",
-            "aiServicesDnsZoneRG": "[parameters('existingDnsZones')[variables('aiServicesDnsZoneName')]]",
-            "openAiDnsZoneRG": "[parameters('existingDnsZones')[variables('openAiDnsZoneName')]]",
-            "cognitiveServicesDnsZoneRG": "[parameters('existingDnsZones')[variables('cognitiveServicesDnsZoneName')]]",
-            "aiSearchDnsZoneRG": "[parameters('existingDnsZones')[variables('aiSearchDnsZoneName')]]",
-            "storageDnsZoneRG": "[parameters('existingDnsZones')[variables('storageDnsZoneName')]]",
-            "cosmosDBDnsZoneRG": "[parameters('existingDnsZones')[variables('cosmosDBDnsZoneName')]]",
-            "apiManagementDnsZoneRG": "[parameters('existingDnsZones')[variables('apiManagementDnsZoneName')]]",
-            "aiServicesDnsZoneId": "[if(empty(variables('aiServicesDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('aiServicesDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('aiServicesDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('aiServicesDnsZoneName')))]",
-            "openAiDnsZoneId": "[if(empty(variables('openAiDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('openAiDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('openAiDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('openAiDnsZoneName')))]",
-            "cognitiveServicesDnsZoneId": "[if(empty(variables('cognitiveServicesDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('cognitiveServicesDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('cognitiveServicesDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('cognitiveServicesDnsZoneName')))]",
-            "aiSearchDnsZoneId": "[if(empty(variables('aiSearchDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('aiSearchDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('aiSearchDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('aiSearchDnsZoneName')))]",
-            "storageDnsZoneId": "[if(empty(variables('storageDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('storageDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('storageDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('storageDnsZoneName')))]",
-            "cosmosDBDnsZoneId": "[if(empty(variables('cosmosDBDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('cosmosDBDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('cosmosDBDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('cosmosDBDnsZoneName')))]",
-            "apiManagementDnsZoneId": "[if(not(empty(parameters('apiManagementName'))), if(empty(variables('apiManagementDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('apiManagementDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('apiManagementDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('apiManagementDnsZoneName'))), '')]"
+            "aiServicesDnsZoneRG": "[parameters('existingDnsZones')[variables('aiServicesDnsZoneName')].resourceGroupName]",
+            "openAiDnsZoneRG": "[parameters('existingDnsZones')[variables('openAiDnsZoneName')].resourceGroupName]",
+            "cognitiveServicesDnsZoneRG": "[parameters('existingDnsZones')[variables('cognitiveServicesDnsZoneName')].resourceGroupName]",
+            "aiSearchDnsZoneRG": "[parameters('existingDnsZones')[variables('aiSearchDnsZoneName')].resourceGroupName]",
+            "storageDnsZoneRG": "[parameters('existingDnsZones')[variables('storageDnsZoneName')].resourceGroupName]",
+            "cosmosDBDnsZoneRG": "[parameters('existingDnsZones')[variables('cosmosDBDnsZoneName')].resourceGroupName]",
+            "apiManagementDnsZoneRG": "[parameters('existingDnsZones')[variables('apiManagementDnsZoneName')].resourceGroupName]",
+            "aiServicesDnsZoneSub": "[if(empty(parameters('existingDnsZones')[variables('aiServicesDnsZoneName')].subscriptionId), subscription().subscriptionId, parameters('existingDnsZones')[variables('aiServicesDnsZoneName')].subscriptionId)]",
+            "openAiDnsZoneSub": "[if(empty(parameters('existingDnsZones')[variables('openAiDnsZoneName')].subscriptionId), subscription().subscriptionId, parameters('existingDnsZones')[variables('openAiDnsZoneName')].subscriptionId)]",
+            "cognitiveServicesDnsZoneSub": "[if(empty(parameters('existingDnsZones')[variables('cognitiveServicesDnsZoneName')].subscriptionId), subscription().subscriptionId, parameters('existingDnsZones')[variables('cognitiveServicesDnsZoneName')].subscriptionId)]",
+            "aiSearchDnsZoneSub": "[if(empty(parameters('existingDnsZones')[variables('aiSearchDnsZoneName')].subscriptionId), subscription().subscriptionId, parameters('existingDnsZones')[variables('aiSearchDnsZoneName')].subscriptionId)]",
+            "storageDnsZoneSub": "[if(empty(parameters('existingDnsZones')[variables('storageDnsZoneName')].subscriptionId), subscription().subscriptionId, parameters('existingDnsZones')[variables('storageDnsZoneName')].subscriptionId)]",
+            "cosmosDBDnsZoneSub": "[if(empty(parameters('existingDnsZones')[variables('cosmosDBDnsZoneName')].subscriptionId), subscription().subscriptionId, parameters('existingDnsZones')[variables('cosmosDBDnsZoneName')].subscriptionId)]",
+            "apiManagementDnsZoneSub": "[if(empty(parameters('existingDnsZones')[variables('apiManagementDnsZoneName')].subscriptionId), subscription().subscriptionId, parameters('existingDnsZones')[variables('apiManagementDnsZoneName')].subscriptionId)]",
+            "aiServicesDnsZoneId": "[if(empty(variables('aiServicesDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('aiServicesDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiServicesDnsZoneSub'), variables('aiServicesDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('aiServicesDnsZoneName')))]",
+            "openAiDnsZoneId": "[if(empty(variables('openAiDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('openAiDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('openAiDnsZoneSub'), variables('openAiDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('openAiDnsZoneName')))]",
+            "cognitiveServicesDnsZoneId": "[if(empty(variables('cognitiveServicesDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('cognitiveServicesDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('cognitiveServicesDnsZoneSub'), variables('cognitiveServicesDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('cognitiveServicesDnsZoneName')))]",
+            "aiSearchDnsZoneId": "[if(empty(variables('aiSearchDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('aiSearchDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiSearchDnsZoneSub'), variables('aiSearchDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('aiSearchDnsZoneName')))]",
+            "storageDnsZoneId": "[if(empty(variables('storageDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('storageDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('storageDnsZoneSub'), variables('storageDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('storageDnsZoneName')))]",
+            "cosmosDBDnsZoneId": "[if(empty(variables('cosmosDBDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('cosmosDBDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('cosmosDBDnsZoneSub'), variables('cosmosDBDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('cosmosDBDnsZoneName')))]",
+            "apiManagementDnsZoneId": "[if(not(empty(parameters('apiManagementName'))), if(empty(variables('apiManagementDnsZoneRG')), resourceId('Microsoft.Network/privateDnsZones', variables('apiManagementDnsZoneName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apiManagementDnsZoneSub'), variables('apiManagementDnsZoneRG')), 'Microsoft.Network/privateDnsZones', variables('apiManagementDnsZoneName'))), '')]"
           },
           "resources": [
             {

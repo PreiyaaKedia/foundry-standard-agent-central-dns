@@ -15,7 +15,7 @@ param projectDescription = 'A project for the AI Foundry account with network se
 param displayName = 'network secured agent project'
 
 param vnetName = 'agent-vnet-test'
-param agentSubnetName = 'agent-subnet-v5'
+param agentSubnetName = 'agent-subnet-cs'
 param peSubnetName = 'pe-subnet'
 
 // Existing resources
@@ -25,15 +25,18 @@ param azureStorageAccountResourceId = '/subscriptions/86eb6d81-d6a8-499f-8fbc-ef
 param azureCosmosDBAccountResourceId = '/subscriptions/86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5/resourceGroups/rg-foundry-byovnet-demo/providers/Microsoft.DocumentDB/databaseAccounts/foundrysasiv2sapkcosmosdb'
 param apiManagementResourceId = ''
 
-// Existing private DNS zones (all in rg-foundry-byovnet-demo)
+// Existing private DNS zones. Each entry: { subscriptionId, resourceGroupName }.
+// Empty resourceGroupName -> the template will create the zone locally.
+// Empty subscriptionId    -> defaults to the deployment subscription.
+// Set subscriptionId to a different sub (e.g. central DNS hub sub) when zones live cross-subscription.
 param existingDnsZones = {
-  'privatelink.services.ai.azure.com': 'rg-foundry-byovnet-demo'
-  'privatelink.openai.azure.com': 'rg-foundry-byovnet-demo'
-  'privatelink.cognitiveservices.azure.com': 'rg-foundry-byovnet-demo'
-  'privatelink.search.windows.net': 'rg-foundry-byovnet-demo'
-  'privatelink.blob.core.windows.net': 'rg-foundry-byovnet-demo'
-  'privatelink.documents.azure.com': 'rg-foundry-byovnet-demo'
-  'privatelink.azure-api.net': ''
+  'privatelink.services.ai.azure.com': { subscriptionId: '86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5', resourceGroupName: 'rg-foundry-byovnet-demo' }
+  'privatelink.openai.azure.com': { subscriptionId: '86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5', resourceGroupName: 'rg-foundry-byovnet-demo' }
+  'privatelink.cognitiveservices.azure.com': { subscriptionId: '86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5', resourceGroupName: 'rg-foundry-byovnet-demo' }
+  'privatelink.search.windows.net': { subscriptionId: '86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5', resourceGroupName: 'rg-foundry-byovnet-demo' }
+  'privatelink.blob.core.windows.net': { subscriptionId: '86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5', resourceGroupName: 'rg-foundry-byovnet-demo' }
+  'privatelink.documents.azure.com': { subscriptionId: '86eb6d81-d6a8-499f-8fbc-ef7207ccc0c5', resourceGroupName: 'rg-foundry-byovnet-demo' }
+  'privatelink.azure-api.net': { subscriptionId: '', resourceGroupName: '' }
 }
 
 param dnsZoneNames = [
@@ -48,7 +51,7 @@ param dnsZoneNames = [
 
 // Network address prefixes (only used when creating a new VNet; ignored since existingVnetResourceId is set)
 param vnetAddressPrefix = ''
-param agentSubnetPrefix = '192.168.6.0/24'
+param agentSubnetPrefix = '192.168.7.0/24'
 param peSubnetPrefix = '192.168.1.0/24'
 
 param projectCapHost = 'caphostproj'

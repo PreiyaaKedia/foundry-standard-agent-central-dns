@@ -94,7 +94,7 @@ var dnsZoneTypes = [
 output dnsZoneExists array = [
   for zoneName in dnsZoneNames: {
     name: zoneName
-    exists: !empty(existingDnsZones[zoneName])
+    exists: !empty(existingDnsZones[zoneName].resourceGroupName)
   }
 ]
 

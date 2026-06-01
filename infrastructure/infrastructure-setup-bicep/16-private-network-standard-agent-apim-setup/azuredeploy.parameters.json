@@ -73,13 +73,13 @@
     },
     "existingDnsZones": {
       "value": {
-        "privatelink.services.ai.azure.com": "",
-        "privatelink.openai.azure.com": "",
-        "privatelink.cognitiveservices.azure.com": "",
-        "privatelink.search.windows.net": "",
-        "privatelink.blob.core.windows.net": "",
-        "privatelink.documents.azure.com": "",
-        "privatelink.azure-api.net": ""
+        "privatelink.services.ai.azure.com": { "subscriptionId": "", "resourceGroupName": "" },
+        "privatelink.openai.azure.com": { "subscriptionId": "", "resourceGroupName": "" },
+        "privatelink.cognitiveservices.azure.com": { "subscriptionId": "", "resourceGroupName": "" },
+        "privatelink.search.windows.net": { "subscriptionId": "", "resourceGroupName": "" },
+        "privatelink.blob.core.windows.net": { "subscriptionId": "", "resourceGroupName": "" },
+        "privatelink.documents.azure.com": { "subscriptionId": "", "resourceGroupName": "" },
+        "privatelink.azure-api.net": { "subscriptionId": "", "resourceGroupName": "" }
       }
     }
   }

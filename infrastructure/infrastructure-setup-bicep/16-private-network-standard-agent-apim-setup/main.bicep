@@ -97,15 +97,17 @@ param apiManagementResourceId string = ''
 //@description('Optional: Resource group containing existing private DNS zones. If specified, DNS zones will not be created.')
 //param existingDnsZonesResourceGroup string = ''
 
-@description('Object mapping DNS zone names to their resource group, or empty string to indicate creation')
+@description('''Object mapping DNS zone FQDN to its location. Each value is an object { subscriptionId: string, resourceGroupName: string }.
+- Empty resourceGroupName  -> a new private DNS zone is created in this deployment and linked to the VNet.
+- Non-empty resourceGroupName -> the existing zone is referenced. subscriptionId may be empty to default to the deployment subscription, or set to a different subscription (e.g. a central/hub DNS subscription). When referencing an existing zone, the VNet link and A-record creation must be handled out-of-band (typically by the central networking team) since this deployment will skip the VNet link.''')
 param existingDnsZones object = {
-  'privatelink.services.ai.azure.com': ''
-  'privatelink.openai.azure.com': ''
-  'privatelink.cognitiveservices.azure.com': ''               
-  'privatelink.search.windows.net': ''           
-  'privatelink.blob.core.windows.net': ''                            
-  'privatelink.documents.azure.com': ''
-  'privatelink.azure-api.net': ''                       
+  'privatelink.services.ai.azure.com': { subscriptionId: '', resourceGroupName: '' }
+  'privatelink.openai.azure.com': { subscriptionId: '', resourceGroupName: '' }
+  'privatelink.cognitiveservices.azure.com': { subscriptionId: '', resourceGroupName: '' }
+  'privatelink.search.windows.net': { subscriptionId: '', resourceGroupName: '' }
+  'privatelink.blob.core.windows.net': { subscriptionId: '', resourceGroupName: '' }
+  'privatelink.documents.azure.com': { subscriptionId: '', resourceGroupName: '' }
+  'privatelink.azure-api.net': { subscriptionId: '', resourceGroupName: '' }
 }
 
 @description('Zone Names for Validation of existing Private Dns Zones')
