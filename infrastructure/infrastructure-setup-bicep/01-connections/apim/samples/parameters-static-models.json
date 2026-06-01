@@ -12,7 +12,7 @@
     },
     "accountResourceId": {
       "_comment": "Required when connectionScope = 'account'. Leave empty when connectionScope = 'project'.",
-      "value": ""
+      "value": "/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.CognitiveServices/accounts/YOUR-AI-FOUNDRY-ACCOUNT"
     },
     "apimResourceId": {
       "value": "/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-APIM-RG/providers/Microsoft.ApiManagement/service/YOUR-APIM-SERVICE"
