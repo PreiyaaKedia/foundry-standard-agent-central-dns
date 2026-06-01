@@ -1,0 +1,74 @@
+## Az command to retrieve Foundry Capability Host
+
+# Set context
+az account set --subscription <SUB_ID>
+
+# Account-level capability host
+az rest --method GET \
+  --url "https://management.azure.com/subscriptions/<SUB_ID>/resourceGroups/<RG>/providers/Microsoft.CognitiveServices/accounts/<ACCOUNT>/capabilityHosts?api-version=2025-04-01-preview" \
+  --query "value[].{name:name, kind:properties.capabilityHostKind, state:properties.provisioningState}" -o table
+
+# Project-level capability host
+az rest --method GET \
+  --url "https://management.azure.com/subscriptions/<SUB_ID>/resourceGroups/<RG>/providers/Microsoft.CognitiveServices/accounts/<ACCOUNT>/projects/<PROJECT>/capabilityHosts?api-version=2025-04-01-preview" \
+  --query "value[].{name:name, kind:properties.capabilityHostKind, state:properties.provisioningState}" -o table
+
+# Command to deploy the template
+az deployment group create --resource-group rg-foundry-byovnet-demo --name "deploy-$(Get-Date -Format yyyyMMddHHmmss)" --template-file main.bicep --parameters main.bicepparam
+
+# Command to create a Prompt Agent
+# Get a token with the correct audience for Foundry projects API
+$token = (az account get-access-token --resource "https://ai.azure.com" --query accessToken -o tsv)
+
+$headers = @{
+    "Content-Type"  = "application/json"
+    "Authorization" = "Bearer $token"
+}
+
+$body = @{
+    name       = "PromptAgentApim"
+    definition = @{
+        kind         = "prompt"
+        model        = "apim-foundry-openai-v5/gpt-4o"
+        instructions = "You are a helpful assistant that answers general questions"
+    }
+} | ConvertTo-Json -Depth 5
+
+$response = Invoke-RestMethod `
+    -Uri "https://aiservicesgrdc.services.ai.azure.com/api/projects/projectgrdc/agents?api-version=v1" `
+    -Method Post `
+    -Headers $headers `
+    -Body $body `
+    -ContentType "application/json"
+
+$response | ConvertTo-Json -Depth 10
+
+# Command to query a prompt agents
+$token = (az account get-access-token --resource "https://ai.azure.com" --query accessToken -o tsv)
+
+$endpoint  = "https://aiservicesgrdc.services.ai.azure.com/api/projects/projectgrdc"
+$agentName = "PromptAgentApim"
+
+$headers = @{
+    "Authorization" = "Bearer $token"
+    "Content-Type"  = "application/json"
+}
+
+$body = @{
+    input           = "Hi"
+    agent_reference = @{
+        name = $agentName
+        type = "agent_reference"
+    }
+} | ConvertTo-Json -Depth 5
+
+$response = Invoke-RestMethod `
+    -Uri  "$endpoint/openai/v1/responses" `
+    -Method Post `
+    -Headers $headers `
+    -Body $body
+
+# Print the assistant text
+$response.output |
+    Where-Object { $_.type -eq "message" } |
+    ForEach-Object { $_.content[0].text }
