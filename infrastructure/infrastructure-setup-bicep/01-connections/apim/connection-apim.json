@@ -4,16 +4,34 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "3070388862604795803"
+      "version": "0.28.1.47646",
+      "templateHash": "3791534709979221018"
     }
   },
   "parameters": {
+    "connectionScope": {
+      "type": "string",
+      "defaultValue": "project",
+      "allowedValues": [
+        "project",
+        "account"
+      ],
+      "metadata": {
+        "description": "Scope at which the connection is created. \"project\" (default) creates it under a Foundry project. \"account\" creates it under the Foundry account so all projects in the account can use it and the connection survives project deletion."
+      }
+    },
     "projectResourceId": {
       "type": "string",
       "defaultValue": "/subscriptions/12345678-1234-1234-1234-123456789abc/resourceGroups/rg-sample/providers/Microsoft.CognitiveServices/accounts/sample-foundry-account/projects/sample-project",
       "metadata": {
-        "description": "Resource ID of the AI Foundry project"
+        "description": "Resource ID of the AI Foundry project. Required when connectionScope = \"project\"."
+      }
+    },
+    "accountResourceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource ID of the AI Foundry account. Required when connectionScope = \"account\"."
       }
     },
     "apimResourceId": {
@@ -48,7 +66,8 @@
       "type": "string",
       "defaultValue": "ApiKey",
       "allowedValues": [
-        "ApiKey"
+        "ApiKey",
+        "ProjectManagedIdentity"
       ],
       "metadata": {
         "description": "Authentication type"
@@ -69,7 +88,7 @@
         "false"
       ],
       "metadata": {
-        "description": "Whether deployment name is in URL path vs query parameter"
+        "description": "Whether deployment name is in URL path vs body"
       }
     },
     "inferenceAPIVersion": {
@@ -143,6 +162,8 @@
     "validationMessage": "[if(variables('bothConfiguredError'), 'ERROR: Cannot configure both static models and dynamic discovery. Use either staticModels array OR modelDiscovery parameters, not both.', '')]",
     "neitherConfiguredError": "[and(not(variables('hasModelDiscovery')), not(variables('hasStaticModels')))]",
     "neitherConfiguredMessage": "ERROR: Must configure either static models (staticModels array) OR dynamic discovery (listModelsEndpoint, getModelEndpoint, deploymentProvider). Cannot have neither.",
+    "missingAccountIdError": "[and(equals(parameters('connectionScope'), 'account'), equals(parameters('accountResourceId'), ''))]",
+    "missingAccountIdMessage": "ERROR: connectionScope is \"account\" but accountResourceId was not provided. Pass the Foundry account resource ID.",
     "metadata": "[union(createObject('deploymentInPath', parameters('deploymentInPath')), if(variables('hasInferenceAPIVersion'), createObject('inferenceAPIVersion', parameters('inferenceAPIVersion')), createObject()), if(variables('hasDeploymentAPIVersion'), createObject('deploymentAPIVersion', parameters('deploymentAPIVersion')), createObject()), if(variables('hasModelDiscovery'), createObject('modelDiscovery', string(createObject('listModelsEndpoint', parameters('listModelsEndpoint'), 'getModelEndpoint', parameters('getModelEndpoint'), 'deploymentProvider', parameters('deploymentProvider')))), createObject()), if(and(variables('hasStaticModels'), not(variables('hasModelDiscovery'))), createObject('models', string(parameters('staticModels'))), createObject()), if(variables('hasCustomHeaders'), createObject('customHeaders', string(parameters('customHeaders'))), createObject()), if(variables('hasAuthConfig'), createObject('authConfig', string(parameters('authConfig'))), createObject()))]"
   },
   "resources": [
@@ -173,9 +194,22 @@
       }
     },
     {
-      "condition": "[and(not(variables('bothConfiguredError')), not(variables('neitherConfiguredError')))]",
+      "condition": "[variables('missingAccountIdError')]",
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2023-08-01",
+      "name": "[format('account-scope-validation-error-{0}', uniqueString(resourceGroup().id))]",
+      "location": "[resourceGroup().location]",
+      "kind": "AzurePowerShell",
+      "properties": {
+        "azPowerShellVersion": "8.0",
+        "scriptContent": "[format('throw \"{0}\"', variables('missingAccountIdMessage'))]",
+        "retentionInterval": "PT1H"
+      }
+    },
+    {
+      "condition": "[and(and(not(variables('bothConfiguredError')), not(variables('neitherConfiguredError'))), not(variables('missingAccountIdError')))]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "unified-apim-connection",
       "properties": {
         "expressionEvaluationOptions": {
@@ -183,8 +217,14 @@
         },
         "mode": "Incremental",
         "parameters": {
+          "connectionScope": {
+            "value": "[parameters('connectionScope')]"
+          },
           "projectResourceId": {
             "value": "[parameters('projectResourceId')]"
+          },
+          "accountResourceId": {
+            "value": "[parameters('accountResourceId')]"
           },
           "connectionName": {
             "value": "[variables('finalConnectionName')]"
@@ -214,13 +254,26 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "555869061841630591"
+              "version": "0.28.1.47646",
+              "templateHash": "11519931456440936998"
             }
           },
           "parameters": {
+            "connectionScope": {
+              "type": "string",
+              "defaultValue": "project",
+              "allowedValues": [
+                "project",
+                "account"
+              ]
+            },
             "projectResourceId": {
-              "type": "string"
+              "type": "string",
+              "defaultValue": ""
+            },
+            "accountResourceId": {
+              "type": "string",
+              "defaultValue": ""
             },
             "connectionName": {
               "type": "string"
@@ -248,18 +301,20 @@
             }
           },
           "variables": {
-            "aiFoundryName": "[split(parameters('projectResourceId'), '/')[8]]",
-            "projectName": "[split(parameters('projectResourceId'), '/')[10]]",
+            "isAccountScope": "[equals(parameters('connectionScope'), 'account')]",
+            "sourceResourceId": "[if(variables('isAccountScope'), parameters('accountResourceId'), parameters('projectResourceId'))]",
+            "aiFoundryName": "[split(variables('sourceResourceId'), '/')[8]]",
+            "projectName": "[if(variables('isAccountScope'), '', split(parameters('projectResourceId'), '/')[10])]",
             "apimSubscriptionId": "[split(parameters('apimResourceId'), '/')[2]]",
             "apimResourceGroupName": "[split(parameters('apimResourceId'), '/')[4]]",
             "apimServiceName": "[split(parameters('apimResourceId'), '/')[8]]"
           },
           "resources": [
             {
-              "condition": "[equals(parameters('authType'), 'ApiKey')]",
+              "condition": "[and(not(variables('isAccountScope')), equals(parameters('authType'), 'ApiKey'))]",
               "type": "Microsoft.CognitiveServices/accounts/projects/connections",
               "apiVersion": "2025-04-01-preview",
-              "name": "[format('{0}/{1}/{2}', variables('aiFoundryName'), variables('projectName'), parameters('connectionName'))]",
+              "name": "[format('{0}/{1}/{2}', variables('aiFoundryName'), if(empty(variables('projectName')), 'placeholder', variables('projectName')), parameters('connectionName'))]",
               "properties": {
                 "category": "ApiManagement",
                 "target": "[format('{0}/{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service', variables('apimServiceName')), '2021-08-01').gatewayUrl, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service/apis', variables('apimServiceName'), parameters('apiName')), '2021-08-01').path)]",
@@ -270,16 +325,62 @@
                 },
                 "metadata": "[parameters('metadata')]"
               }
+            },
+            {
+              "condition": "[and(not(variables('isAccountScope')), equals(parameters('authType'), 'ProjectManagedIdentity'))]",
+              "type": "Microsoft.CognitiveServices/accounts/projects/connections",
+              "apiVersion": "2025-04-01-preview",
+              "name": "[format('{0}/{1}/{2}', variables('aiFoundryName'), if(empty(variables('projectName')), 'placeholder', variables('projectName')), parameters('connectionName'))]",
+              "properties": {
+                "category": "ApiManagement",
+                "target": "[format('{0}/{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service', variables('apimServiceName')), '2021-08-01').gatewayUrl, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service/apis', variables('apimServiceName'), parameters('apiName')), '2021-08-01').path)]",
+                "authType": "ProjectManagedIdentity",
+                "audience": "https://cognitiveservices.azure.com",
+                "isSharedToAll": "[parameters('isSharedToAll')]",
+                "credentials": {},
+                "metadata": "[parameters('metadata')]"
+              }
+            },
+            {
+              "condition": "[and(variables('isAccountScope'), equals(parameters('authType'), 'ApiKey'))]",
+              "type": "Microsoft.CognitiveServices/accounts/connections",
+              "apiVersion": "2025-04-01-preview",
+              "name": "[format('{0}/{1}', variables('aiFoundryName'), parameters('connectionName'))]",
+              "properties": {
+                "category": "ApiManagement",
+                "target": "[format('{0}/{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service', variables('apimServiceName')), '2021-08-01').gatewayUrl, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service/apis', variables('apimServiceName'), parameters('apiName')), '2021-08-01').path)]",
+                "authType": "ApiKey",
+                "isSharedToAll": true,
+                "credentials": {
+                  "key": "[listSecrets(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service/subscriptions', variables('apimServiceName'), parameters('apimSubscriptionName')), '2021-08-01').primaryKey]"
+                },
+                "metadata": "[parameters('metadata')]"
+              }
+            },
+            {
+              "condition": "[and(variables('isAccountScope'), equals(parameters('authType'), 'ProjectManagedIdentity'))]",
+              "type": "Microsoft.CognitiveServices/accounts/connections",
+              "apiVersion": "2025-04-01-preview",
+              "name": "[format('{0}/{1}', variables('aiFoundryName'), parameters('connectionName'))]",
+              "properties": {
+                "category": "ApiManagement",
+                "target": "[format('{0}/{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service', variables('apimServiceName')), '2021-08-01').gatewayUrl, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('apimSubscriptionId'), variables('apimResourceGroupName')), 'Microsoft.ApiManagement/service/apis', variables('apimServiceName'), parameters('apiName')), '2021-08-01').path)]",
+                "authType": "ProjectManagedIdentity",
+                "audience": "https://cognitiveservices.azure.com",
+                "isSharedToAll": true,
+                "credentials": {},
+                "metadata": "[parameters('metadata')]"
+              }
             }
           ],
           "outputs": {
             "connectionName": {
               "type": "string",
-              "value": "[if(equals(parameters('authType'), 'ApiKey'), parameters('connectionName'), '')]"
+              "value": "[parameters('connectionName')]"
             },
             "connectionId": {
               "type": "string",
-              "value": "[if(equals(parameters('authType'), 'ApiKey'), resourceId('Microsoft.CognitiveServices/accounts/projects/connections', variables('aiFoundryName'), variables('projectName'), parameters('connectionName')), '')]"
+              "value": "[if(variables('isAccountScope'), if(equals(parameters('authType'), 'ApiKey'), resourceId('Microsoft.CognitiveServices/accounts/connections', variables('aiFoundryName'), parameters('connectionName')), resourceId('Microsoft.CognitiveServices/accounts/connections', variables('aiFoundryName'), parameters('connectionName'))), if(equals(parameters('authType'), 'ApiKey'), resourceId('Microsoft.CognitiveServices/accounts/projects/connections', variables('aiFoundryName'), if(empty(variables('projectName')), 'placeholder', variables('projectName')), parameters('connectionName')), resourceId('Microsoft.CognitiveServices/accounts/projects/connections', variables('aiFoundryName'), if(empty(variables('projectName')), 'placeholder', variables('projectName')), parameters('connectionName'))))]"
             },
             "targetUrl": {
               "type": "string",
@@ -288,6 +389,10 @@
             "authType": {
               "type": "string",
               "value": "[parameters('authType')]"
+            },
+            "connectionScope": {
+              "type": "string",
+              "value": "[parameters('connectionScope')]"
             },
             "metadata": {
               "type": "object",

@@ -24,8 +24,15 @@ Use: az account set --subscription <foundry-subscription-id>
 // REQUIRED PARAMETERS
 // ========================================
 
-@description('Resource ID of the AI Foundry project')
+@allowed(['project', 'account'])
+@description('Scope at which the connection is created. "project" (default) creates it under a Foundry project. "account" creates it under the Foundry account so all projects in the account can use it and the connection survives project deletion.')
+param connectionScope string = 'project'
+
+@description('Resource ID of the AI Foundry project. Required when connectionScope = "project".')
 param projectResourceId string = '/subscriptions/12345678-1234-1234-1234-123456789abc/resourceGroups/rg-sample/providers/Microsoft.CognitiveServices/accounts/sample-foundry-account/projects/sample-project'
+
+@description('Resource ID of the AI Foundry account. Required when connectionScope = "account".')
+param accountResourceId string = ''
 
 @description('Resource ID of the APIM service')
 param apimResourceId string = '/subscriptions/12345678-1234-1234-1234-123456789abc/resourceGroups/rg-sample/providers/Microsoft.ApiManagement/service/sample-apim'
@@ -135,6 +142,21 @@ resource configValidation 'Microsoft.Resources/deploymentScripts@2023-08-01' = i
   }
 }
 
+// Validation: account scope requires accountResourceId
+var missingAccountIdError = connectionScope == 'account' && accountResourceId == ''
+var missingAccountIdMessage = 'ERROR: connectionScope is "account" but accountResourceId was not provided. Pass the Foundry account resource ID.'
+
+resource accountScopeValidation 'Microsoft.Resources/deploymentScripts@2023-08-01' = if (missingAccountIdError) {
+  name: 'account-scope-validation-error-${uniqueString(resourceGroup().id)}'
+  location: resourceGroup().location
+  kind: 'AzurePowerShell'
+  properties: {
+    azPowerShellVersion: '8.0'
+    scriptContent: 'throw "${missingAccountIdMessage}"'
+    retentionInterval: 'PT1H'
+  }
+}
+
 
 // Build metadata using conditional union - includes only non-empty parameters
 var metadata = union(
@@ -176,10 +198,12 @@ var metadata = union(
 // DEPLOYMENT
 // ========================================
 
-module apimConnection 'modules/apim-connection-common.bicep' = if (!bothConfiguredError && !neitherConfiguredError) {
+module apimConnection 'modules/apim-connection-common.bicep' = if (!bothConfiguredError && !neitherConfiguredError && !missingAccountIdError) {
   name: 'unified-apim-connection'
   params: {
+    connectionScope: connectionScope
     projectResourceId: projectResourceId
+    accountResourceId: accountResourceId
     connectionName: finalConnectionName
     apimResourceId: apimResourceId
     apiName: apiName
