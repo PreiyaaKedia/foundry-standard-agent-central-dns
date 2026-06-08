@@ -3,11 +3,19 @@ Common module for creating APIM connections to Azure AI Foundry projects.
 This module handles the core connection logic and can be reused across different APIM connection samples.
 */
 
-// Project resource parameters
-param projectResourceId string
+// Connection scope: 'project' (default) or 'account'
+@allowed(['project', 'account'])
+param connectionScope string = 'project'
+
+// Project resource ID (required when scope = project)
+param projectResourceId string = ''
+
+// Account resource ID (required when scope = account)
+param accountResourceId string = ''
+
 param connectionName string
 
-// APIM resource parameters  
+// APIM resource parameters
 param apimResourceId string
 param apiName string
 param apimSubscriptionName string = 'master'
@@ -19,9 +27,11 @@ param isSharedToAll bool = false
 // APIM-specific metadata (passed through from parent template)
 param metadata object
 
-// Extract project information from resource ID
-var aiFoundryName = split(projectResourceId, '/')[8]
-var projectName = split(projectResourceId, '/')[10]
+// Resolve Foundry account/project names from the appropriate resource ID
+var isAccountScope = connectionScope == 'account'
+var sourceResourceId = isAccountScope ? accountResourceId : projectResourceId
+var aiFoundryName = split(sourceResourceId, '/')[8]
+var projectName = isAccountScope ? '' : split(projectResourceId, '/')[10]
 
 // Extract APIM information from resource ID
 var apimSubscriptionId = split(apimResourceId, '/')[2]
@@ -34,9 +44,9 @@ resource aiFoundry 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' exi
   scope: resourceGroup()
 }
 
-// Reference the project within the AI Foundry account
-resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' existing = {
-  name: projectName
+// Reference the project within the AI Foundry account (only when scope = project)
+resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' existing = if (!isAccountScope) {
+  name: empty(projectName) ? 'placeholder' : projectName
   parent: aiFoundry
 }
 
@@ -58,13 +68,18 @@ resource apimSubscription 'Microsoft.ApiManagement/service/subscriptions@2021-08
   parent: existingApim
 }
 
-// Create the connection with ApiKey authentication
-resource connectionApiKey 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = if (authType == 'ApiKey') {
+var connectionTarget = '${existingApim.properties.gatewayUrl}/${apimApi.properties.path}'
+
+// ----------------------------------------
+// PROJECT-LEVEL CONNECTIONS
+// ----------------------------------------
+
+resource connectionApiKeyProject 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = if (!isAccountScope && authType == 'ApiKey') {
   name: connectionName
   parent: aiProject
   properties: {
     category: 'ApiManagement'
-    target: '${existingApim.properties.gatewayUrl}/${apimApi.properties.path}'
+    target: connectionTarget
     authType: 'ApiKey'
     isSharedToAll: isSharedToAll
     credentials: {
@@ -74,12 +89,12 @@ resource connectionApiKey 'Microsoft.CognitiveServices/accounts/projects/connect
   }
 }
 
-resource connectionAAD 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = if (authType == 'ProjectManagedIdentity') {
+resource connectionAADProject 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = if (!isAccountScope && authType == 'ProjectManagedIdentity') {
   name: connectionName
   parent: aiProject
   properties: {
     category: 'ApiManagement'
-    target: '${existingApim.properties.gatewayUrl}/${apimApi.properties.path}'
+    target: connectionTarget
     authType: 'ProjectManagedIdentity'
     audience: 'https://cognitiveservices.azure.com'
     isSharedToAll: isSharedToAll
@@ -88,9 +103,46 @@ resource connectionAAD 'Microsoft.CognitiveServices/accounts/projects/connection
   }
 }
 
+// ----------------------------------------
+// ACCOUNT-LEVEL CONNECTIONS
+// Survives project deletion and is usable by every project in the account.
+// ----------------------------------------
+
+resource connectionApiKeyAccount 'Microsoft.CognitiveServices/accounts/connections@2025-04-01-preview' = if (isAccountScope && authType == 'ApiKey') {
+  name: connectionName
+  parent: aiFoundry
+  properties: {
+    category: 'ApiManagement'
+    target: connectionTarget
+    authType: 'ApiKey'
+    isSharedToAll: true
+    credentials: {
+      key: apimSubscription.listSecrets(apimSubscription.apiVersion).primaryKey
+    }
+    metadata: metadata
+  }
+}
+
+resource connectionAADAccount 'Microsoft.CognitiveServices/accounts/connections@2025-04-01-preview' = if (isAccountScope && authType == 'ProjectManagedIdentity') {
+  name: connectionName
+  parent: aiFoundry
+  properties: {
+    category: 'ApiManagement'
+    target: connectionTarget
+    authType: 'ProjectManagedIdentity'
+    audience: 'https://cognitiveservices.azure.com'
+    isSharedToAll: true
+    credentials: {}
+    metadata: metadata
+  }
+}
+
 // Outputs (only from the created connection)
-output connectionName string = authType == 'ApiKey' ? connectionApiKey.name : connectionAAD.name
-output connectionId string = authType == 'ApiKey' ? connectionApiKey.id : connectionApiKey.name
-output targetUrl string = '${existingApim.properties.gatewayUrl}/${apimApi.properties.path}'
+output connectionName string = connectionName
+output connectionId string = isAccountScope
+  ? (authType == 'ApiKey' ? connectionApiKeyAccount.id : connectionAADAccount.id)
+  : (authType == 'ApiKey' ? connectionApiKeyProject.id : connectionAADProject.id)
+output targetUrl string = connectionTarget
 output authType string = authType
+output connectionScope string = connectionScope
 output metadata object = metadata

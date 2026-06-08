@@ -2,8 +2,17 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "connectionScope": {
+      "_comment": "'project' (default) creates a project-scoped connection. 'account' creates an account-scoped connection shared across all projects in the Foundry account.",
+      "value": "project"
+    },
     "projectResourceId": {
+       "_comment": "Required when connectionScope = 'project'. Leave default/empty when connectionScope = 'account'.",
       "value": "/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.CognitiveServices/accounts/YOUR-AI-FOUNDRY-ACCOUNT/projects/YOUR-PROJECT"
+    },
+    "accountResourceId": {
+      "_comment": "Required when connectionScope = 'account'. Leave empty when connectionScope = 'project'.",
+      "value": "/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.CognitiveServices/accounts/YOUR-AI-FOUNDRY-ACCOUNT"
     },
     "apimResourceId": {
       "value": "/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-APIM-RG/providers/Microsoft.ApiManagement/service/YOUR-APIM-SERVICE"
