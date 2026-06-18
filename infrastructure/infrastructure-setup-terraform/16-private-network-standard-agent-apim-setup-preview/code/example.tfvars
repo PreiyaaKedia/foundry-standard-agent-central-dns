@@ -1,7 +1,7 @@
 # Example configuration for private network standard agent with API Management
 
 # Azure region
-location = "eastus2"
+location = "southindia"
 
 # AI Foundry configuration
 ai_services_name_prefix = "foundry"
@@ -17,6 +17,26 @@ apim_sku             = "Developer" # Use Developer for testing, Premium for prod
 apim_publisher_name  = "AI Foundry Publisher"
 apim_publisher_email = "admin@example.com"
 
+# ---- APIM mode ----
+# "create-internal" (default): create a new APIM here in Internal VNet mode (uses apim_sku /
+#                              apim_publisher_* / subnet_apim_prefix above).
+# "byo-standardv2":            do NOT create APIM, subnet_apim, or APIM NSG. Instead create a
+#                              Gateway private endpoint pointing at an existing StandardV2 APIM.
+#                              The PE registers in privatelink.azure-api.net automatically (local
+#                              or central DNS depending on existing_dns_zones). The APIM may live
+#                              in a different RG or subscription.
+#
+apim_mode                  = "byo-standardv2"
+existing_apim_id           = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ApiManagement/service/<apim-name>"
+# existing_apim_gateway_url  = "https://<apim-name>.azure-api.net"
+#
+# Notes for byo-standardv2:
+#   - subnet_apim_prefix, apim_sku, apim_publisher_* are ignored.
+#   - The deploying identity needs permission to auto-approve a PE connection on the target APIM
+#     (e.g. Network Contributor on the APIM, or auto-approval configured on the APIM PLS).
+#     Otherwise set up manual approval in the portal after apply.
+#   - You manage APIs / policies on your APIM yourself; this template does not write to a BYO APIM.
+
 # Model configuration
 model_name     = "gpt-4.1"
 model_version  = "2025-04-14"
@@ -27,3 +47,61 @@ model_capacity = 40
 # 2. APIM with Internal VNet requires additional DNS configuration
 # 3. Additional APIM policies and configurations need to be set up manually or with additional Terraform resources
 # 4. Consider using Application Gateway if you need external access to internal APIM
+
+# ---- Central / cross-subscription Private DNS (optional) ----
+# Uncomment and fill in to REFERENCE existing private DNS zones that live in a different RG or
+# subscription (typical hub-and-spoke with central DNS). Leave entries with empty resource_group_name
+# to have this deployment CREATE them locally.
+#
+# When referencing existing zones, the hub team must have already:
+#   1. Pre-created a VNet link from each zone to this spoke VNet (this template will not create one).
+#   2. Granted the deploying identity "Private DNS Zone Contributor" on the central DNS RG so the
+#      private endpoint can register its A-record.
+#
+existing_dns_zones = {
+  "privatelink.services.ai.azure.com"       = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
+  "privatelink.openai.azure.com"            = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
+  "privatelink.cognitiveservices.azure.com" = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
+  "privatelink.blob.core.windows.net"       = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
+  "privatelink.search.windows.net"          = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
+  "privatelink.documents.azure.com"         = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
+  "privatelink.azure-api.net"               = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
+}
+#
+# Note on privatelink.azure-api.net: APIM is deployed in Internal VNet mode here (not StandardV2 + PE),
+# so this template does NOT create a private endpoint for APIM and therefore does not auto-register
+# an A record in the zone. After deploy you must manually add an A record
+#   <apim-name>.azure-api.net  ->  <APIM private IP>
+# (and the same for portal/management/scm/developer hostnames if used) in the zone — in the local
+# RG when the zone is created here, or in the central DNS RG when referencing an existing zone.
+
+# ---- BYO shared resources (optional) ----
+# Each block below is independent: set only the ones you want to reuse. When unset, the template
+# creates the resource. When set, the template references the existing one and only creates the
+# spoke-side private endpoint into it (so the new VNet can reach it privately).
+#
+existing_resource_group_name  = "rg-foundry-shared"        # same-sub only
+existing_vnet_id              = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>"
+existing_pe_subnet_name       = "pe-subnet"                # required when existing_vnet_id is set; hosts all PEs created by this template
+existing_agent_subnet_name    = "agent-subnet"             # required when existing_vnet_id is set; injected into Foundry account (networkInjections, scenario=agent)
+# existing_apim_subnet_name     = "subnet-apim"              # required if apim_mode = create-internal AND existing_vnet_id is set
+existing_storage_account_id   = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<name>"
+existing_ai_search_id         = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Search/searchServices/<name>"
+existing_cosmos_db_account_id = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.DocumentDB/databaseAccounts/<name>"
+#
+# Notes:
+#   - Cross-subscription supported for VNet / Storage / Search / Cosmos (no provider alias needed —
+#     IDs are passed through and PEs are created in the spoke RG/sub).
+#   - For BYO RG, the RG must be in the deployment subscription.
+#   - For BYO Cosmos, the deploying identity needs `Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments/write`
+#     on the existing Cosmos account so this template can grant the Foundry MI the data-plane role.
+#   - For BYO Storage / Search, deploying identity needs Owner / User Access Admin on those resources
+#     for the role assignments to succeed.
+#   - For BYO VNet:
+#       * existing_pe_subnet_name MUST be a separate subnet from existing_agent_subnet_name (a single
+#         subnet cannot both host private endpoints AND be delegated to Microsoft.App/environments).
+#       * The PE subnet must have `privateEndpointNetworkPolicies = Disabled`.
+#       * The agent subnet must be empty (no PE NICs, no other resources) so this template can PATCH
+#         a Microsoft.App/environments delegation onto it. /24 is a safe default size.
+#       * If you also want APIM Internal VNet here, the APIM subnet must be empty and sized
+#         appropriately (see APIM docs).

@@ -1,11 +1,11 @@
 output "resource_group_name" {
-  description = "The name of the resource group"
-  value       = azurerm_resource_group.rg.name
+  description = "The name of the resource group (created here or BYO)."
+  value       = local.rg_name
 }
 
 output "vnet_id" {
-  description = "The ID of the virtual network"
-  value       = azurerm_virtual_network.vnet.id
+  description = "The ID of the virtual network (created here or BYO)."
+  value       = local.vnet_id
 }
 
 output "ai_foundry_id" {
@@ -19,33 +19,33 @@ output "ai_project_id" {
 }
 
 output "storage_account_id" {
-  description = "The ID of the storage account"
-  value       = azurerm_storage_account.storage.id
+  description = "The ID of the storage account (created here or BYO)."
+  value       = local.storage_id
 }
 
 output "search_service_id" {
-  description = "The ID of the AI Search service"
-  value       = azurerm_search_service.search.id
+  description = "The ID of the AI Search service (created here or BYO)."
+  value       = local.search_id
 }
 
 output "cosmos_db_id" {
-  description = "The ID of the Cosmos DB account"
-  value       = azurerm_cosmosdb_account.cosmos.id
+  description = "The ID of the Cosmos DB account (created here or BYO)."
+  value       = local.cosmos_id
 }
 
 output "apim_id" {
-  description = "The ID of the API Management instance"
-  value       = azurerm_api_management.apim.id
+  description = "The ID of the API Management instance (created here or BYO)."
+  value       = var.apim_mode == "create-internal" ? azurerm_api_management.apim[0].id : var.existing_apim_id
 }
 
 output "apim_gateway_url" {
-  description = "The gateway URL of the API Management instance"
-  value       = azurerm_api_management.apim.gateway_url
+  description = "The gateway URL of the API Management instance (created here or BYO)."
+  value       = var.apim_mode == "create-internal" ? azurerm_api_management.apim[0].gateway_url : var.existing_apim_gateway_url
 }
 
 output "apim_portal_url" {
-  description = "The portal URL of the API Management instance"
-  value       = azurerm_api_management.apim.portal_url
+  description = "The portal URL of the API Management instance. Empty in BYO mode (managed by the APIM owner)."
+  value       = var.apim_mode == "create-internal" ? azurerm_api_management.apim[0].portal_url : ""
 }
 
 output "notes" {

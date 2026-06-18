@@ -1,0 +1,28 @@
+## Foundry account + projects
+resource_group_name = "rg-foundry-byovnet-pk-v1"
+account_name        = "aiservicesgrdc"
+source_project_name = "projectgrdc"
+target_project_name = "projectapimtest" # will be CREATED by this module under account_name
+location            = "southindia"      # must match the parent Foundry account's region
+
+## Source connection names on projectgrdc
+cosmos_db_connection     = "foundrysasiv2sapkcosmosdb"
+azure_storage_connection = "foundrysasiv2sapkstorage"
+ai_search_connection     = "foundrysasiv2sapksearch"
+
+## Capability host
+project_cap_host = "caphostproj"
+
+## Underlying backend resources (shared with projectgrdc).
+## RG defaults to var.resource_group_name; override if they live elsewhere.
+cosmos_db_account_name        = "foundrysasiv2sapkcosmosdb"
+azure_storage_account_name    = "foundrysasiv2sapkstorage"
+ai_search_service_name        = "foundrysasiv2sapksearch"
+cosmos_db_resource_group_name     = "rg-foundry-byovnet-demo"
+azure_storage_resource_group_name = "rg-foundry-byovnet-demo"
+ai_search_resource_group_name     = "rg-foundry-byovnet-demo"
+
+## Optional overrides for target connection names (default: <src>-<targetProject>)
+# target_cosmos_db_connection     = "cosmos-projectapimtest"
+# target_azure_storage_connection = "storage-projectapimtest"
+# target_ai_search_connection     = "search-projectapimtest"
