@@ -6,7 +6,9 @@ Use this against an **existing** Foundry account where one project already has t
 
 ## What it does
 
-1. Creates a new project (`target_project_name`) under the existing Foundry account with a system-assigned managed identity.
+For each entry in `target_project_names`:
+
+1. Creates a new project under the existing Foundry account with a system-assigned managed identity.
 2. Reads the three source-project connections (`cosmosDBConnection`, `azureStorageConnection`, `aiSearchConnection`).
 3. Clones them onto the new project under unique names (`<src>-<targetProject>` by default).
 4. Grants the new project's managed identity five pre-capHost roles on the shared backends:
@@ -29,7 +31,8 @@ See [`terraform.tfvars.example`](./terraform.tfvars.example) for the full input 
 
 ## Notes
 
-- The `target_project_name` must NOT already exist under the account — this module creates it. Set `location` to match the parent account's region.
+- `target_project_names` is a **set** consumed via `for_each`. To onboard another project, **append** its name to the list and re-apply — existing projects already in state are left untouched. Do NOT replace or remove an entry unless you intend to destroy that project's connections, role assignments, and capability host.
+- Each name in `target_project_names` must NOT already exist under the account — this module creates them. Set `location` to match the parent account's region.
 - Connection names are **unique per account** (not per project) — that's why the clones get a `-<targetProject>` suffix. Override `target_*_connection` to customize.
 - The Cosmos DB account must already have a SQL database named `enterprise_memory` (the standard agent setup creates this on first capHost).
 - If the three backends live in a different resource group or subscription than the Foundry account, pass `*_resource_group_name` / `*_subscription_id`.

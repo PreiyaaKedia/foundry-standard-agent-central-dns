@@ -2,8 +2,19 @@
 resource_group_name = "rg-foundry-byovnet-pk-v1"
 account_name        = "aiservicesgrdc"
 source_project_name = "projectgrdc"
-target_project_name = "projectapimtest" # will be CREATED by this module under account_name
-location            = "southindia"      # must match the parent Foundry account's region
+
+## Set of target projects this module will create + onboard.
+## Add more entries to onboard additional projects in a single apply —
+## existing projects already in state are left untouched on re-apply.
+## Do NOT remove an entry unless you intend to destroy that project's
+## connections, role assignments, and capability host.
+target_project_names = [
+  "projectapimtest",
+  # "projectfoo",
+  # "projectbar",
+]
+
+location = "southindia" # must match the parent Foundry account's region
 
 ## Source connection names on projectgrdc
 cosmos_db_connection     = "foundrysasiv2sapkcosmosdb"
@@ -15,9 +26,9 @@ project_cap_host = "caphostproj"
 
 ## Underlying backend resources (shared with projectgrdc).
 ## RG defaults to var.resource_group_name; override if they live elsewhere.
-cosmos_db_account_name        = "foundrysasiv2sapkcosmosdb"
-azure_storage_account_name    = "foundrysasiv2sapkstorage"
-ai_search_service_name        = "foundrysasiv2sapksearch"
+cosmos_db_account_name            = "foundrysasiv2sapkcosmosdb"
+azure_storage_account_name        = "foundrysasiv2sapkstorage"
+ai_search_service_name            = "foundrysasiv2sapksearch"
 cosmos_db_resource_group_name     = "rg-foundry-byovnet-demo"
 azure_storage_resource_group_name = "rg-foundry-byovnet-demo"
 ai_search_resource_group_name     = "rg-foundry-byovnet-demo"

@@ -14,13 +14,18 @@ variable "source_project_name" {
   type        = string
 }
 
-variable "target_project_name" {
-  description = "New project to receive cloned connections + capability host. Created by this module under the existing Foundry account."
-  type        = string
+variable "target_project_names" {
+  description = "Set of new project names. Each gets cloned connections + a capability host. Add to this set to onboard more projects in the same apply."
+  type        = set(string)
+
+  validation {
+    condition     = length(var.target_project_names) > 0
+    error_message = "Provide at least one target project name."
+  }
 }
 
 variable "location" {
-  description = "Azure region for the new target project. Must match the parent Foundry account's region."
+  description = "Azure region for the new target projects. Must match the parent Foundry account's region."
   type        = string
 }
 
@@ -40,28 +45,9 @@ variable "ai_search_connection" {
   type        = string
 }
 
-## -------- Target connection names (account-unique) --------
-variable "target_cosmos_db_connection" {
-  description = "Target Cosmos DB connection name on the new project. Defaults to <source>-<targetProject>."
-  type        = string
-  default     = null
-}
-
-variable "target_azure_storage_connection" {
-  description = "Target Storage connection name on the new project. Defaults to <source>-<targetProject>."
-  type        = string
-  default     = null
-}
-
-variable "target_ai_search_connection" {
-  description = "Target AI Search connection name on the new project. Defaults to <source>-<targetProject>."
-  type        = string
-  default     = null
-}
-
 ## -------- Capability host --------
 variable "project_cap_host" {
-  description = "Project capability host name"
+  description = "Project capability host name (same value used on each target project)"
   type        = string
   default     = "caphostproj"
 }
