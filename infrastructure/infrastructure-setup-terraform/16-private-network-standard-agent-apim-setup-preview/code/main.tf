@@ -409,7 +409,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "apim" {
 ## Create Storage Account with private endpoint (skip create if existing_storage_account_id is set).
 resource "azurerm_storage_account" "storage" {
   count                    = local.storage_create ? 1 : 0
-  name                     = "aifoundry${random_string.unique.result}stor"
+  name                     = var.storage_account_name != "" ? var.storage_account_name : "aifoundry${random_string.unique.result}stor"
   resource_group_name      = local.rg_name
   location                 = var.location
   account_kind             = "StorageV2"
@@ -449,7 +449,7 @@ resource "azurerm_private_endpoint" "storage" {
 ## Create AI Search with private endpoint (skip create if existing_ai_search_id is set).
 resource "azurerm_search_service" "search" {
   count               = local.search_create ? 1 : 0
-  name                = replace("aifoundry-${random_string.unique.result}-search", "_", "-")
+  name                = var.ai_search_name != "" ? var.ai_search_name : replace("aifoundry-${random_string.unique.result}-search", "_", "-")
   resource_group_name = local.rg_name
   location            = var.location
   sku                 = "standard"
@@ -481,7 +481,7 @@ resource "azurerm_private_endpoint" "search" {
 ## Create Cosmos DB with private endpoint (skip create if existing_cosmos_db_account_id is set).
 resource "azurerm_cosmosdb_account" "cosmos" {
   count                             = local.cosmos_create ? 1 : 0
-  name                              = "aifoundry${random_string.unique.result}cosmos"
+  name                              = var.cosmos_db_account_name != "" ? var.cosmos_db_account_name : "aifoundry${random_string.unique.result}cosmos"
   location                          = var.location
   resource_group_name               = local.rg_name
   offer_type                        = "Standard"

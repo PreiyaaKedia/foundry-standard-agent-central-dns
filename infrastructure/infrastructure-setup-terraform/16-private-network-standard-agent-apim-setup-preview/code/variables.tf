@@ -204,3 +204,26 @@ variable "existing_cosmos_db_account_id" {
   type        = string
   default     = ""
 }
+
+# ---- Name overrides for resources this template CREATES ----
+# Used only when the corresponding existing_*_id is empty (i.e. this template creates the resource).
+# Leave as "" to fall back to the auto-generated name (aifoundry<rand>...). Storage account names
+# must be globally unique, 3-24 chars, lowercase letters/numbers only.
+
+variable "storage_account_name" {
+  description = "Optional. Name for the storage account this template creates. Ignored when existing_storage_account_id is set. Defaults to aifoundry<rand>stor."
+  type        = string
+  default     = ""
+}
+
+variable "ai_search_name" {
+  description = "Optional. Name for the AI Search service this template creates. Ignored when existing_ai_search_id is set. Defaults to aifoundry-<rand>-search."
+  type        = string
+  default     = ""
+}
+
+variable "cosmos_db_account_name" {
+  description = "Optional. Name for the Cosmos DB account this template creates. Ignored when existing_cosmos_db_account_id is set. Defaults to aifoundry<rand>cosmos."
+  type        = string
+  default     = ""
+}

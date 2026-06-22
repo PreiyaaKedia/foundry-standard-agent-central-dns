@@ -89,6 +89,15 @@ existing_storage_account_id   = "/subscriptions/<sub>/resourceGroups/<rg>/provid
 existing_ai_search_id         = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Search/searchServices/<name>"
 existing_cosmos_db_account_id = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.DocumentDB/databaseAccounts/<name>"
 #
+# ---- Name overrides for resources this template CREATES (optional) ----
+# Each is used ONLY when the corresponding existing_*_id above is empty (i.e. this template creates
+# the resource). Leave as "" / commented out to fall back to the auto-generated name
+# (aifoundry<rand>stor / aifoundry-<rand>-search / aifoundry<rand>cosmos).
+#
+# storage_account_name   = "mystorageacctname"   # 3-24 chars, lowercase letters/digits, globally unique
+# ai_search_name         = "my-search-name"      # 2-60 chars, lowercase letters/digits/hyphens, globally unique
+# cosmos_db_account_name = "my-cosmos-name"      # 3-44 chars, lowercase letters/digits/hyphens, globally unique
+#
 # Notes:
 #   - Cross-subscription supported for VNet / Storage / Search / Cosmos (no provider alias needed —
 #     IDs are passed through and PEs are created in the spoke RG/sub).
