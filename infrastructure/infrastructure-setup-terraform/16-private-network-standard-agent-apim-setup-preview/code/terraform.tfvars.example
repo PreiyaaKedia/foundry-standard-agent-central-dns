@@ -72,12 +72,18 @@ existing_dns_zones = {
   "privatelink.azure-api.net"               = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
 }
 #
-# Note on privatelink.azure-api.net: APIM is deployed in Internal VNet mode here (not StandardV2 + PE),
-# so this template does NOT create a private endpoint for APIM and therefore does not auto-register
-# an A record in the zone. After deploy you must manually add an A record
-#   <apim-name>.azure-api.net  ->  <APIM private IP>
-# (and the same for portal/management/scm/developer hostnames if used) in the zone — in the local
-# RG when the zone is created here, or in the central DNS RG when referencing an existing zone.
+# Note on privatelink.azure-api.net:
+#   - create-internal mode: this template does NOT create a PE for APIM (Internal VNet mode has no
+#     PE), so after deploy add an A record manually in the zone:
+#       <apim-name>.azure-api.net  ->  <APIM private IP>
+#     (and the same for portal/management/scm/developer hostnames if used) — in the local RG when
+#     the zone is created here, or in the central DNS RG when referencing an existing zone.
+#   - byo-standardv2 mode (default, create_apim_pe = true): the BYO APIM Gateway PE auto-registers
+#     its A record in this zone, so point it at your central DNS subscription/RG and no manual
+#     record is needed.
+#   - byo-standardv2 mode with create_apim_pe = false: no PE and no DNS record are created by this
+#     template — you must ensure the spoke VNet already resolves <apim>.azure-api.net to a reachable
+#     APIM private IP (typically via a pre-existing PE you manage yourself).
 
 # ---- BYO shared resources (optional) ----
 # Each block below is independent: set only the ones you want to reuse. When unset, the template
