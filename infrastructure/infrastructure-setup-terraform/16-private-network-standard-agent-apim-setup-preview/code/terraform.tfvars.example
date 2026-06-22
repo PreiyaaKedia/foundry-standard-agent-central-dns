@@ -30,6 +30,10 @@ apim_mode                  = "byo-standardv2"
 existing_apim_id           = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ApiManagement/service/<apim-name>"
 # existing_apim_gateway_url  = "https://<apim-name>.azure-api.net"
 #
+# Skip the PE + DNS record creation when the spoke VNet can already reach the APIM privately
+# through a pre-existing PE you manage yourself (default: true creates them).
+# create_apim_pe = false
+#
 # Notes for byo-standardv2:
 #   - subnet_apim_prefix, apim_sku, apim_publisher_* are ignored.
 #   - The deploying identity needs permission to auto-approve a PE connection on the target APIM

@@ -73,6 +73,22 @@ variable "existing_apim_gateway_url" {
   default     = ""
 }
 
+variable "create_apim_pe" {
+  description = <<-EOT
+    Only used when apim_mode = byo-standardv2.
+
+    - true (default): create a Gateway private endpoint for the existing APIM into the spoke PE
+      subnet and auto-register its A record in privatelink.azure-api.net (or central DNS, per
+      existing_dns_zones).
+    - false: skip both the PE and DNS A-record registration. Use this when the spoke VNet can
+      already reach the APIM privately via a pre-existing PE you manage yourself (e.g. shared in
+      the hub, or already deployed into this same VNet). You are responsible for ensuring DNS
+      resolution of <apim>.azure-api.net from the spoke.
+  EOT
+  type        = bool
+  default     = true
+}
+
 variable "apim_sku" {
   description = "SKU for API Management (Developer, Standard, Premium). Only used when apim_mode = create-internal."
   type        = string

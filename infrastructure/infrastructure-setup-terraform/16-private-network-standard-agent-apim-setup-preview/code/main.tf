@@ -605,7 +605,7 @@ resource "azurerm_api_management" "apim" {
 ## the APIM (e.g. Network Contributor / approve role) or that the APIM is configured for
 ## auto-approval.
 resource "azurerm_private_endpoint" "apim_byo" {
-  count               = local.apim_byo ? 1 : 0
+  count               = local.apim_byo && var.create_apim_pe ? 1 : 0
   name                = "pe-apim-${random_string.unique.result}"
   location            = var.location
   resource_group_name = local.rg_name
