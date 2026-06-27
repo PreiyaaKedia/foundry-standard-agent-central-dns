@@ -814,39 +814,17 @@ resource "time_sleep" "wait_for_project_activation" {
   create_duration = "180s"
 }
 
-## Create the ACCOUNT-level capability host first. The Foundry RP normally auto-creates one when
-## the account is provisioned with allowProjectManagement = true, but on some accounts/regions it
-## doesn't, and the project-level caphost PUT then fails with:
-##   "Foundry Account capabilityHost Not Found, please retry again after creating capabilityHost
-##    for the Foundry Account."
-## Creating it explicitly here makes the deployment deterministic.
-resource "azapi_resource" "account_capability_host" {
-  type      = "Microsoft.CognitiveServices/accounts/capabilityHosts@2025-04-01-preview"
-  name      = "${var.project_cap_host}-account"
-  parent_id = azapi_resource.ai_foundry.id
-
-  schema_validation_enabled = false
-
-  body = {
-    properties = {
-      capabilityHostKind = "Agents"
-      customerSubnet     = local.agent_subnet_id
-    }
-  }
-
-  depends_on = [time_sleep.wait_for_project_activation]
-
-  timeouts {
-    create = "60m"
-    update = "60m"
-    delete = "60m"
-  }
-}
-
 ## Create the project-scoped capability host (kind = Agents). This is what wires the project's
 ## thread/storage/vector-store to the BYO Cosmos / Storage / AI Search connections and is required
 ## before any hosted-agent or thread-storage operations can succeed. Mirrors the Bicep module
 ## modules-network-secured/add-project-capability-host.bicep.
+##
+## NOTE: We intentionally do NOT pre-create an account-level capabilityHost. The Foundry RP
+## auto-creates one (with its own internal name) during this PUT when the account has
+## allowProjectManagement = true + networkInjections set. Trying to PUT a second account caphost
+## under a different name causes the request to hang and Terraform to fail with
+## "context deadline exceeded" — only one capabilityHost per account is permitted, and the
+## customerSubnet on the auto-created one is taken from the account's networkInjections.
 resource "azapi_resource" "project_capability_host" {
   type      = "Microsoft.CognitiveServices/accounts/projects/capabilityHosts@2025-04-01-preview"
   name      = var.project_cap_host
@@ -866,7 +844,7 @@ resource "azapi_resource" "project_capability_host" {
     }
   }
 
-  depends_on = [azapi_resource.account_capability_host]
+  depends_on = [time_sleep.wait_for_project_activation]
 
   timeouts {
     create = "60m"

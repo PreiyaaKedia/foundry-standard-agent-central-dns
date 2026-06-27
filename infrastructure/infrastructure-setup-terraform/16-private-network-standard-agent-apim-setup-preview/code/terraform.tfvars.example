@@ -1,67 +1,52 @@
 # Example configuration for private network standard agent with API Management
 
 # Azure region
-location = "southindia"
+location = "eastus2"
 
 # AI Foundry configuration
 ai_services_name_prefix = "foundry"
 project_name            = "private-apim-agent-project"
 
-# Network configuration
-vnet_address_space              = ["10.0.0.0/16"]
-subnet_private_endpoints_prefix = "10.0.1.0/24"
-subnet_apim_prefix              = "10.0.2.0/24"
-
-# API Management configuration
-apim_sku             = "Developer" # Use Developer for testing, Premium for production
-apim_publisher_name  = "AI Foundry Publisher"
-apim_publisher_email = "admin@example.com"
+# API Management configuration (used only when apim_mode = "create-internal")
+# apim_sku             = "Developer" # Use Developer for testing, Premium for production
+# apim_publisher_name  = "AI Foundry Publisher"
+# apim_publisher_email = "admin@example.com"
 
 # ---- APIM mode ----
-# "create-internal" (default): create a new APIM here in Internal VNet mode (uses apim_sku /
-#                              apim_publisher_* / subnet_apim_prefix above).
-# "byo-standardv2":            do NOT create APIM, subnet_apim, or APIM NSG. Instead create a
-#                              Gateway private endpoint pointing at an existing StandardV2 APIM.
-#                              The PE registers in privatelink.azure-api.net automatically (local
-#                              or central DNS depending on existing_dns_zones). The APIM may live
-#                              in a different RG or subscription.
+# "create-internal" (default): create a new APIM here in Internal VNet mode.
+# "byo-standardv2":            do NOT create APIM/subnet_apim/NSG. Create a Gateway private
+#                              endpoint pointing at an existing StandardV2 APIM and register it
+#                              in privatelink.azure-api.net.
 #
-apim_mode                  = "byo-standardv2"
-existing_apim_id           = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ApiManagement/service/<apim-name>"
-# existing_apim_gateway_url  = "https://<apim-name>.azure-api.net"
-#
-# Skip the PE + DNS record creation when the spoke VNet can already reach the APIM privately
-# through a pre-existing PE you manage yourself (default: true creates them).
-# create_apim_pe = false
-#
-# Notes for byo-standardv2:
-#   - subnet_apim_prefix, apim_sku, apim_publisher_* are ignored.
-#   - The deploying identity needs permission to auto-approve a PE connection on the target APIM
-#     (e.g. Network Contributor on the APIM, or auto-approval configured on the APIM PLS).
-#     Otherwise set up manual approval in the portal after apply.
-#   - You manage APIs / policies on your APIM yourself; this template does not write to a BYO APIM.
+apim_mode                 = "byo-standardv2"
+existing_apim_id          = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ApiManagement/service/<apim-name>"
+existing_apim_gateway_url = "https://<apim-name>.azure-api.net"
+
+# Reuse an existing private endpoint for the BYO APIM instead of creating a new one.
+# When false, this template skips both the PE and its DNS A-record in privatelink.azure-api.net.
+# Requires that the spoke VNet already has private DNS resolution to the APIM.
+create_apim_pe = false
 
 # Model configuration
-model_name     = "gpt-4.1"
-model_version  = "2025-04-14"
-model_capacity = 40
+model_name     = "gpt-4o"
+model_version  = "2024-11-20"
+model_capacity = 10
 
 # IMPORTANT NOTES:
-# 1. API Management deployment can take 30-45 minutes
+# 1. API Management deployment can take 30-45 minutes (create-internal mode)
 # 2. APIM with Internal VNet requires additional DNS configuration
 # 3. Additional APIM policies and configurations need to be set up manually or with additional Terraform resources
 # 4. Consider using Application Gateway if you need external access to internal APIM
 
-# ---- Central / cross-subscription Private DNS (optional) ----
-# Uncomment and fill in to REFERENCE existing private DNS zones that live in a different RG or
-# subscription (typical hub-and-spoke with central DNS). Leave entries with empty resource_group_name
-# to have this deployment CREATE them locally.
+# ---- Central / cross-subscription Private DNS ----
+# REFERENCE existing private DNS zones that live in a different RG or subscription (central DNS).
+# Set resource_group_name = "" to have this deployment CREATE the zone locally instead.
 #
 # When referencing existing zones, the hub team must have already:
 #   1. Pre-created a VNet link from each zone to this spoke VNet (this template will not create one).
 #   2. Granted the deploying identity "Private DNS Zone Contributor" on the central DNS RG so the
 #      private endpoint can register its A-record.
-#
+
 existing_dns_zones = {
   "privatelink.services.ai.azure.com"       = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
   "privatelink.openai.azure.com"            = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
@@ -71,56 +56,55 @@ existing_dns_zones = {
   "privatelink.documents.azure.com"         = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
   "privatelink.azure-api.net"               = { subscription_id = "<hub-sub-id>", resource_group_name = "rg-central-dns" }
 }
-#
+
 # Note on privatelink.azure-api.net:
 #   - create-internal mode: this template does NOT create a PE for APIM (Internal VNet mode has no
 #     PE), so after deploy add an A record manually in the zone:
 #       <apim-name>.azure-api.net  ->  <APIM private IP>
-#     (and the same for portal/management/scm/developer hostnames if used) — in the local RG when
-#     the zone is created here, or in the central DNS RG when referencing an existing zone.
-#   - byo-standardv2 mode (default, create_apim_pe = true): the BYO APIM Gateway PE auto-registers
-#     its A record in this zone, so point it at your central DNS subscription/RG and no manual
-#     record is needed.
-#   - byo-standardv2 mode with create_apim_pe = false: no PE and no DNS record are created by this
-#     template — you must ensure the spoke VNet already resolves <apim>.azure-api.net to a reachable
-#     APIM private IP (typically via a pre-existing PE you manage yourself).
+#     (and the same for portal/management/scm/developer hostnames if used).
+#   - byo-standardv2 mode:   the BYO APIM Gateway PE auto-registers its A record in this zone, so
+#     point it at your central DNS subscription/RG and no manual record is needed.
 
-# ---- BYO shared resources (optional) ----
-# Each block below is independent: set only the ones you want to reuse. When unset, the template
-# creates the resource. When set, the template references the existing one and only creates the
-# spoke-side private endpoint into it (so the new VNet can reach it privately).
-#
-existing_resource_group_name  = "rg-foundry-shared"        # same-sub only
-existing_vnet_id              = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>"
-existing_pe_subnet_name       = "pe-subnet"                # required when existing_vnet_id is set; hosts all PEs created by this template
-existing_agent_subnet_name    = "agent-subnet"             # required when existing_vnet_id is set; injected into Foundry account (networkInjections, scenario=agent)
-# existing_apim_subnet_name     = "subnet-apim"              # required if apim_mode = create-internal AND existing_vnet_id is set
-existing_storage_account_id   = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<name>"
-existing_ai_search_id         = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Search/searchServices/<name>"
+# ---- BYO shared resources ----
+# Each block below is independent. Uncomment and fill in only the ones you want to reuse; leave
+# the rest commented to have this template create them. Cross-subscription is supported for
+# VNet / Storage / Search / Cosmos (the existing resource may live in any sub the deploying
+# identity can read; the PE into it is always created in the spoke RG/sub).
+
+# Resource group (must be in the deployment subscription)
+existing_resource_group_name = "rg-foundry-shared"
+
+# Virtual network + required subnet names within it
+# - existing_pe_subnet_name:    subnet that will host the private endpoints created by this template.
+# - existing_agent_subnet_name: subnet the Foundry agent runtime is injected into (networkInjections).
+#                               MUST be a separate subnet from the PE subnet. This template will add a
+#                               Microsoft.App/environments delegation to it (must be empty for delegation to succeed).
+existing_vnet_id           = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>"
+existing_pe_subnet_name    = "pe-subnet"
+existing_agent_subnet_name = "agent-subnet"
+existing_apim_subnet_name  = "" # only needed if apim_mode = "create-internal"
+
+# Storage account
+existing_storage_account_id = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<name>"
+
+# AI Search service
+existing_ai_search_id = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Search/searchServices/<name>"
+
+# Cosmos DB account
 existing_cosmos_db_account_id = "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.DocumentDB/databaseAccounts/<name>"
-#
-# ---- Name overrides for resources this template CREATES (optional) ----
-# Each is used ONLY when the corresponding existing_*_id above is empty (i.e. this template creates
-# the resource). Leave as "" / commented out to fall back to the auto-generated name
+
+# ---- Name overrides for resources this template CREATES ----
+# Each is used ONLY when the matching existing_*_id above is empty (i.e. this template creates the
+# resource). Ignored in BYO mode. Leave commented out to fall back to the auto-generated names
 # (aifoundry<rand>stor / aifoundry-<rand>-search / aifoundry<rand>cosmos).
 #
 # storage_account_name   = "mystorageacctname"   # 3-24 chars, lowercase letters/digits, globally unique
 # ai_search_name         = "my-search-name"      # 2-60 chars, lowercase letters/digits/hyphens, globally unique
 # cosmos_db_account_name = "my-cosmos-name"      # 3-44 chars, lowercase letters/digits/hyphens, globally unique
-#
-# Notes:
-#   - Cross-subscription supported for VNet / Storage / Search / Cosmos (no provider alias needed —
-#     IDs are passed through and PEs are created in the spoke RG/sub).
-#   - For BYO RG, the RG must be in the deployment subscription.
-#   - For BYO Cosmos, the deploying identity needs `Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments/write`
-#     on the existing Cosmos account so this template can grant the Foundry MI the data-plane role.
-#   - For BYO Storage / Search, deploying identity needs Owner / User Access Admin on those resources
-#     for the role assignments to succeed.
-#   - For BYO VNet:
-#       * existing_pe_subnet_name MUST be a separate subnet from existing_agent_subnet_name (a single
-#         subnet cannot both host private endpoints AND be delegated to Microsoft.App/environments).
-#       * The PE subnet must have `privateEndpointNetworkPolicies = Disabled`.
-#       * The agent subnet must be empty (no PE NICs, no other resources) so this template can PATCH
-#         a Microsoft.App/environments delegation onto it. /24 is a safe default size.
-#       * If you also want APIM Internal VNet here, the APIM subnet must be empty and sized
-#         appropriately (see APIM docs).
+
+# RBAC needed on the existing resources (deploying identity):
+#   - Storage:  Owner or User Access Administrator (to grant Foundry MI the Blob Data Contributor role)
+#   - Search:   Owner or User Access Administrator (Search Index/Service Data Contributor + Service Contributor)
+#   - Cosmos:   Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments/write
+#   - VNet:     Network Contributor on the PE subnet (to create the PE NIC) and the subnet must
+#               have privateEndpointNetworkPolicies = Disabled
